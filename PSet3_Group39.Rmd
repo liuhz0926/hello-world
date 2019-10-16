@@ -1,0 +1,335 @@
+---
+title: "EDAV PSet3 Group39"
+author: "Olivia Wang YW3324, Huazhang Liu HL3338"
+date: "10/8/2019"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+```{r}
+library(parcoords)
+library(tidyverse)
+library(dplyr)
+library(rvest)
+library(HH)
+library(readxl)
+library(vcd)
+library(ucidata) 
+library(rvest)
+library(rstan) 
+library(rstanarm) 
+library(dplyr) 
+library(readr) 
+library(knitr) 
+library(ggplot2) 
+library(tidyr)
+library(GGally)
+```
+
+### 1. Coal Emissions
+
+Data: https://datadiscovery.nlm.nih.gov/Environmental-Health/TOXMAP-EPA-Clean-Air-Markets-2016-Coal-Emissions/n97u-wtk7
+
+(OK to manually download `.csv` file)
+
+```{r pre1download}
+download.file("https://datadiscovery.nlm.nih.gov/api/views/n97u-wtk7/rows.csv",
+              "2016_Coal_Emissions.csv")
+```
+
+```{r pre1}
+emission_table <- read.csv(file="2016_Coal_Emissions.csv",
+                           header=TRUE, sep=",") %>%
+  rename(SO2_rank = SO2.rank, NOx_rank = NOx.rank, CO2_rank = CO2.rank, 
+         Heat_Input = Heat.Input, Gross_Load = Gross.Load)
+
+emission_table$State <- substr(emission_table$Location, 1, 2)
+
+```
+
+
+(a) Using `parcoords::parcoords()`, create an interactive parallel coordinate plot of `SO2`, `NOx`, `CO2`, `Heat Input` and `Gross Load`. Each line in the plot should represent one coal plant. Note any patterns.
+
+```{r 1a}
+emission_table  %>% 
+  dplyr::select(SO2, NOx, CO2, Heat_Input, Gross_Load) %>%
+  arrange(SO2) %>% 
+  parcoords(
+    rownames = F,  
+    brushMode = "1D-axes",
+    reorderable = T,
+    queue = T,
+    alpha = 0.4
+    ) 
+```
+
+> By adjusting the alpha, we are able to see the pattern more clearly. We can see that the values of all the variables are concentrated in the bottom 20% of the distribution (especially for SO2 and NOx).
+The most significant trend can be found if we look at CO2, Heat input and Gross load. We can see that the lines between these three variables are straight and parallel to each other. As a result, we can infer that they are generally positively correlated to each other.
+Furthermore, the lines between CO2, SO2 and NOx have no distinguishable patterns. Some plants could release a high level of NOx, but a low level in SO2 or CO2. A few have a high level in CO2 but a low level in SO2 and NOx. Plants do not seem to show direct relation between these three pollutants. 
+Which type of pollutant that the plants release could depend on what type of coal they produce. 
+
+
+
+(b) Create a second interactive parallel coordiante plot, with the lines colored by state. Include only the states with more than 15 plants. Do any new patterns emerge? Explain briefly.
+
+```{r 1b}
+state_frequence <- data.frame(table(emission_table$State))
+state15freq <- state_frequence[state_frequence$Freq > 15, ]
+
+emission_table  %>% 
+  dplyr::select(State, SO2, NOx, CO2, Heat_Input, Gross_Load) %>%
+  arrange(State) %>% 
+  filter(State %in% state15freq$Var1) %>%
+  parcoords(
+    rownames = F,  
+    brushMode = "1D-axes",
+    reorderable = T,
+    queue = T, 
+    color = list(
+      colorBy = "State",
+      colorScale = "scaleOrdinal",
+      colorScheme = "schemeCategory10"
+    ),
+    withD3 = T
+    ) 
+
+```
+
+> There are seven states with more than 15 plants. Some of the patterns mentioned in part (a) are much clearer in this graph. 
+> Most of the values for all 7 states again lie in the bottom 25% for all 5 variables (below 2000 at NOx level). 
+> Looking at each state individually, Texas has the highest range for SO2 emission, with the highest value among all the states for SO2 and also one of the lowest values for SO2 emission. Most of Texas's plants' NOx level lie in the bottom 50%.
+Pennsylvania has the highest range for NOx emission, with one of its plants having the highest level of NOx and another one having the lowest.
+Ohio has most, but one plant, with SO2 values of below 12,000, and most of the NOx levels for its plants are concentrated between 4,000 and 6,000.
+Michigan has most of its values for all variables concentrated in the bottom of the graph.
+Kentucky has is values for all varibles rather evenly spread out across the bottom 80% of the graph
+Indiana seems to have the biggest range of NOx emission, CO2 emission, heat input and Gross load among its plants.
+Illinois's plants have a low average SO2 emission level, with all of the data concentrated between 0 and 10,000.
+
+
+
+(c) What do `SO2`, `NOx` and `CO2` stand for? Briefly describe why each is harmful.
+
+> These three emissions are pollutants from the coal plants. 
+`SO2` is sulfur dioxide, a toxic gas responsible for the smell of burnt matches. It is released naturally by volcanic activity and is produced as a by-product of copper extraction and the burning of fossil fuels contaminated with sulfur compounds. It is found to be one of the culprits for causing smog and acid rain. Inhaling sulfur dioxide is associated with increased respiratory symptoms and disease, such as asthma, and difficulty in breathing, and premature death. Short time exposure causes coughing, wheezing and shortness of breath and a tight felling around the chest. (https://en.wikipedia.org/wiki/Sulfur_dioxide). 
+
+> `NOx` is a generic term for the nitrogen oxides that are most relevant for air pollution, namely nitric oxide and nitrogen dioxide. These gases contribute to the formation of smog and acid rain, as well as affecting tropospheric ozone. NOx  gases are usually produced from the reaction among nitrogen and oxygen during combustion of fuels, such as hydrocarbons, in air; especially at high temperatures, such as occur in car engines.In areas of high motor vehicle traffic, such as in large cities, the nitrogen oxides emitted can be a significant source of air pollution. NOx gases are also produced naturally by lightning. It also could impact on respiratory conditions. NOx reacts with ammonia, moisture, and other compounds to form nitric acid vapor and related particles. Small particles can penetrate deeply into sensitive lung tissue and damage it, causing premature death in extreme cases. Inhalation of such particles causes or worsens respiratory diseases, such as emphysema or bronchitis, and aggravates existing heart disease. Under long term exposure of NOx, it could decrease lung function, increase the response to allergens and cause asthma. (https://en.wikipedia.org/wiki/NOx). 
+
+> `CO2` is carbon dioxide, a colorless gas that we usually called the greenhouse gas. CO2 is produced by all aerobic organisms when they metabolize carbohydrates and lipids to produce energy by respiration. The health effect it has include headaches, dizziness and restlessness. It could cause climate change and acid rain to the environment. (https://en.wikipedia.org/wiki/Carbon_dioxide). 
+
+
+
+### 2. Planets
+
+Using **rvest**, scrape the data from this table: https://nssdc.gsfc.nasa.gov/planetary/factsheet/ (hint: `html_table` is helpful). Remove `MOON` data. Then, using `GGally::ggparcoord()`, create two parallel coordinate plots of the numerical variables in the dataset, one colored by the value of `Ring System?` and one colored by planet name. In both cases, each line should represent one planet. Use `coord_flip` so the variable names are easier to read.  Describe any patterns you find.
+
+
+```{r pre2}
+# In this part, we clean the data and return the data frame we need at the end 
+
+# read the table from the url and save the first data frame
+planets <- read_html("https://nssdc.gsfc.nasa.gov/planetary/factsheet/")
+planets_t1 <- html_table(planets, header = TRUE)[[1]] %>%
+  dplyr::select(-"MOON")
+
+# delete the last row because it gives the planet name again
+planets_t1 <- planets_t1[-c(21),]
+colnames(planets_t1)[1] <-"Variable"
+# transpose rows and columns of the first table into second table and convert the data type
+planets_t2 = setNames(data.frame(t(planets_t1[,-1])), planets_t1[,1])
+planets_t2 <- data.frame(lapply(planets_t2, as.character), stringsAsFactors=FALSE)
+planets_t2$Planet <- c("Mercury", "Venus", "Earth", "Mars", "Jupiter",
+                 "Saturn", "Uranus", "Neptune", "Pluto")
+colnames(planets_t2) = c("Mass", "Diameter", "Density", "Gravity", "Escape_Velocity",
+              "Rotation_Period", "Length_of_Day ", "Distance_from_Sun", "Perihelion",
+              "Aphelion", "Orbital_Period", "Orbital_Velocity", "Orbital_Inclination", 
+              "Orbital_Eccentricity", "Obliquity_to_Orbit", "Mean_Temperature", 
+              "Surface_Pressure", "Number_of_Moons", "Ring_System", 
+              "Global_Magnetic_Field", "Planet")
+planets_t2[, c(1:18)] <- lapply(planets_t2[,c(1:18)], 
+                                   function(planets_t2){as.numeric(gsub(",", "", planets_t2))})
+
+planets_t2 <- planets_t2[c(21, 1:20)]
+
+```
+
+
+```{r 2}
+# We choose to skip column 18, which is the Surface_Pressure. 
+# Because this column has 4 unknowns out of 9 data value. 
+# So it will cause gaps and unselect due to the unknowns in Surface_Pressure
+colused = c(2:17, 19)
+ggparcoord(data = planets_t2, columns = colused, groupColumn = 20,
+           title = "Planetary Facts in the Solar System (Grouped by Ring_System)") +
+  coord_flip()
+
+ggparcoord(data = planets_t2, columns = colused, groupColumn = 1, 
+           title = "Planetary Facts in the Solar System (Grouped by Planet)") +
+  coord_flip()
+
+```
+
+> Looking at the first graph that is grouped by Ring System. We can see that planets with no ring system generally have similar values for the number of moons whereas those with a ring system is more dispersed. Similarly, for orbital period, aphelion, perihelion, and distance from the sun, those with a ring system have similar values that are approximately -0.8. This is probably due to the fact that those 4 variables are positively correlated between the 4 planets. Moreover, we can see that for density, the two groups (ring or no ring) converge towards two different points. Those with no ring system seem to converge towards 1.2 whereas those with a ring system seem to converge towards -1. Those with no ring system also seems to converge to a certain point(-0.5) for mass whereas those with a ring system are more dispersed.
+> The second graph gives us a clearer pattern of each of the planets. We can see that Mercury, Mars, Earth and Venus are the 4 planets that share similar values for Aphelion, Perihelion and distance from sun
+Aphelion, Perihelion and distance from sun are very similar between Mercury, Mars, Earth and Venus. This is probably due to the fact that these variables are positivelycorrelated between the 4 planets. We can also see that Pluto has the highest level of distance from sun, perihelion, aphelion, orbital period, orbital inclination and orbital eccentricity, but it has the lowest escape velocity, gravity, and mean temperature. Venus has the lowest rotation period and it is far away from the others.enus and Mercury have a relatively higher level of length of day compared with others. Jupiter has the highest level of number of moons, escape velocity, gravity, diameter and mass. 
+
+
+### 3. Heart Disease
+
+Data: four data frames that begin with `heart_disease` in the **ucidata** package
+
+Packages: You may use **vcd** or **ggmosaic**.
+
+(a) Create three mosaic plots, each involving two categorical variables from `heart_disease_cl` and interpret the plots. (You may reuse variables, for example X ~ Y and X ~ Z).
+```{r}
+mosaic(sex ~ cp, 
+       labeling = labeling_border(rot_labels = c(0,0,0,0)),
+       heart_disease_cl)
+mosaic(restecg ~ cp, 
+       labeling = labeling_border(rot_labels = c(0,0,0,0), abbreviate_labs = c(5,5,20,20)),
+       heart_disease_cl)
+mosaic(sex ~ restecg, 
+       labeling = labeling_border(rot_labels = c(0,90,90,90), abbreviate_labs = c(10,10,5,5)),
+       heart_disease_cl)
+```
+
+> When looking at sex and chest pain, we can see that with all types of chest pains, more men seem to experience it compared to women. With the exception of non-anginal chest pain, which, while is still more common in men, is more equally distributed among both sexes. Whereas the difference between sex is most significant in typical angina chest pain, where significanly more men suffer from it than women.
+> When looking at restecg: resting electrocardiographic results and chest pain, we can see that about a little less than half of the patients with typical angina chest pain have normal restecg and the other half shows probable or definite left ventricular hypertrophy by Estes' criteria. Whereas with atypical angina chest pain, more than half of the patients have normal restecg and the rest show probable or definite left ventricular hypertrophy by Estes' criteria. Both typical and atypical angina chest pain seem to have little to no patients that have ST-T wave abnormality. A little over half of the patients with non-anginal pain have normal restecg, while very few have ST-T wave abnormality and the rest (about 40%) show probable or definite left ventricular hypertrophy by Estes' criteria. Whereas with asymptomatic chest pain patients, about the same amount (about 45%) of patients have normal restecg or show probable or definite left ventricular hypertrophy by Estes' criteria, and very few patients have ST-T wave abnormality restecg.
+> Last but not least, when looking at restecg: resting electrocardiographic results and sex, we can see that normal restecg and probable/definite hypertrophy restecg are distributed among the two sexes in a similar fashion. About 30% of normal restecg patients are females and the rest are males, probable/definite hypertrohy restecg patients are distributed similarly among the two sexes. With ST-T wave abnormality, however, it seems like about 70-80% of its patients are female.
+
+
+(b) Combine the four heart disease datasets and create a mosaic plot showing chest pain by sex and location. Describe any patterns.
+```{r}
+heart_disease_cl1 <- heart_disease_cl
+heart_disease_cl1$location <- "Cleveland"
+
+heart_disease_hu1 <- heart_disease_hu
+heart_disease_hu1$location <- "Hungary"
+
+heart_disease_ch1 <- heart_disease_ch
+heart_disease_ch1$location <- "Switzerland"
+
+heart_disease_va1 <- heart_disease_va
+heart_disease_va1$location <- "VA Long Beach"
+
+combined_heart_disease <- rbind(heart_disease_cl1,heart_disease_ch1,heart_disease_hu1,heart_disease_va1)
+
+mosaic(cp~sex + location, 
+       labeling = labeling_border(rot_labels = c(0,90,70,0), abbreviate_labs = c(10,5,5,5)), 
+       direction = c('v','v','h'), 
+       combined_heart_disease, line = 5)
+
+                        
+```
+
+> First, we can see that there is a bigger male patient population in general. 
+Secondly, we can see that Cleveland and Hungary has the biggest patient populations in both male and female. 
+> Looking at the different categories of chest pains, we can see that asymptomatic chest pains seem to be the most common type of chest pains in both sexes. This type of chest pain accounts for more than half of the population of male patients in VA Long Beach, more than half in Switzerland, and more than half in both Cleveland and Hungary. 
+Whereas asymptomatic chest pain accounts for a little less than half of the female patient population in Cleveland and a little less than 30% in Hungary and a shocking 80% in Switzerland and about 60-70% in VA Long Beach. 
+Atypical angina and non-anginal chest pains seem to be the second most common type of chest pains. Non-anginal pain takes up about 30% of the kind of chest pains male patients experience and about 20% in female patients in Hungary and about 40% in female patients in Cleveland, which is similar to the percentage of asymptomatic female patients in Cleveland, and about 10% among female patients in Switzerland and about 40% among female patients in VA Long Beach. 
+Atypical angina chest pain takes up about 10% of male VA Long Beach patients, 10% of male Switzerland patients and about 40% of male Hungary patients and 20% of male Cleveland patients. 
+Whereas atypical agina chest pain takes up about 15% among Cleveland female patients about about 50% of Hungary female patients. The proportion of typical angina patients across all locations between two sexes are small in comparison to the other types of chest pains.
+
+### 4. District 3 Elementary Schools
+
+Recently, there has been much debate about the lack of racial and economic diversity at Manhattan District 3 elementary schools, part of a larger and long-standing controversy about iniquities in the New York City public school system as a whole.
+
+The *New York Times* article, "Rezoning Plan to Remake 3 Upper West Side Schools Will Proceed, City Says,"  (https://www.nytimes.com/2016/11/10/nyregion/rezoning-plan-for-3-upper-west-side-schools-will-proceed-city-says.html) (2016-11-10) identifies the 11 elementary schools in Manhattan District 3.
+
+For this question, we will analyze parent survey results for these schools.
+
+Data: https://www.schools.nyc.gov/about-us/reports/school-quality/nyc-school-survey
+
+
+(a) Choose one of the likert style questions from the 2019 parent survey and use a diverging stacked bar chart to show results for the 11 schools identified in the article referenced above.
+```{r}
+lik <- read_xlsx("2019-public-data-file_parent.xlsx", sheet = 4)
+lik <- lik[,1:7]
+names(lik)[4] <- "Strongly Disagree"
+names(lik)[5] <- "Disagree"
+names(lik)[6] <- "Agree"
+names(lik)[7] <- "Strongly Agree"
+lik <- lik[-(1:2),,drop = FALSE]
+lik <- subset(lik, select = -c(2:3))
+lik$`Strongly Disagree` <- as.numeric(as.character(lik$`Strongly Disagree`))
+lik$`Disagree` <- as.numeric(as.character(lik$`Disagree`))
+lik$`Agree` <- as.numeric(as.character(lik$`Agree`))
+lik$`Strongly Agree` <- as.numeric(as.character(lik$`Strongly Agree`))
+lik <- lik[lik$DBN %in% c("03M165","03M145","03M075","03M163","03M084","03M166","03M009","03M087","03M199","03M191","03M452"), ]
+
+HH::likert(DBN ~ ., data=lik, 
+       positive.order=TRUE, 
+       main = list("1a. School staff regularly communicate with me about 
+                   how I can help my child learn."), 
+       sub= list("Responses"))
+```
+
+
+(b) Choose a question that was asked in 2014 and 2019 and compare results for the three schools discussed most in the article: P.S. 199, P.S. 191, and P.S. 452. You may use two separate diverging stacked bar charts or combine all the information in one.
+```{r}
+lik1 <- read_xlsx("2019-public-data-file_parent.xlsx", sheet = 4)
+lik1 <- lik1[,1:81]
+lik1 <- subset(lik1, select = -c(2:76))
+names(lik1)[2] <- "Strongly Disagree"
+names(lik1)[3] <- "Disagree"
+names(lik1)[4] <- "Agree"
+names(lik1)[5] <- "Strongly Agree"
+names(lik1)[6] <- "I don't know"
+lik1 <- lik1[-(1:2),,drop = FALSE]
+
+lik1$`Strongly Disagree` <- as.numeric(as.character(lik1$`Strongly Disagree`))
+lik1$`Disagree` <- as.numeric(as.character(lik1$`Disagree`))
+lik1$`Agree` <- as.numeric(as.character(lik1$`Agree`))
+lik1$`Strongly Agree` <- as.numeric(as.character(lik1$`Strongly Agree`))
+lik1$`I don't know` <- as.numeric(as.character(lik1$`I don't know`))
+lik1 <- lik1[lik1$DBN %in% c("03M199","03M191","03M452"), ]
+
+
+lik2 <-read_xlsx("2014_20School_20Survey.xlsx",sheet = 4)
+lik2 <- lik2[,1:69]
+lik2 <- subset(lik2, select = -c(2:64))
+names(lik2)[2] <- "Strongly Disagree"
+names(lik2)[3] <- "Disagree"
+names(lik2)[4] <- "Agree"
+names(lik2)[5] <- "Strongly Agree"
+names(lik2)[6] <- "I don't know"
+lik2 <- lik2[-(1:2),,drop = FALSE]
+lik2[is.na(lik2)] <- 0
+
+lik2$`Strongly Disagree` <- as.numeric(as.character(lik2$`Strongly Disagree`))
+lik2$`Disagree` <- as.numeric(as.character(lik2$`Disagree`))
+lik2$`Agree` <- as.numeric(as.character(lik2$`Agree`))
+lik2$`Strongly Agree` <- as.numeric(as.character(lik2$`Strongly Agree`))
+lik2$`I don't know` <- as.numeric(as.character(lik2$`I don't know`))
+lik2 <- lik2[lik2$DBN %in% c("03M199","03M191","03M452"), ]
+
+HH::likert(DBN ~ ., data=lik2, 
+       positive.order=TRUE, 
+       main = list("My Child is Safe at This School-2014"), 
+       sub= list("ParentResponses"))
+
+HH::likert(DBN ~ ., data=lik1, 
+       positive.order=TRUE, 
+       main = list("My Child is Safe at This School-2019"), 
+       sub= list("Parent Responses"))
+
+
+```
+
+
+(c) Interpret your findings of (b) in light of the reputations of the schools as presented in the article. Are they surprising or what you would have expected?
+
+> The three schools, `Public School 191, 199 and 452`, are said to face significant impact from the move. According to the article, Public Schools 199 and 452 serve students that are mostly white and well-off, whereas Public School 191 has a population that is poor and mostly black and hispanic.This article was published in November 2016. According to the article, it was planned that P.S. 191 would shift to a newly constructed builbing. P.S. 452 would move into P.S. 191's current building with 2 other schools, which should serve twice as many students as it does now. Whereas some families currently zoned for P.S. 199 would be put into the P.S. 191 zone and P.S. 452 would add some of the present zones for P.S. 191 and 199.
+The `overall effect` would be that more white, well-off students will be put in P.S. 191 and more poor, minority students will be put into the zones for P.S. 199 and 452.(https://www.nytimes.com/2016/11/10/nyregion/rezoning-plan-for-3-upper-west-side-schools-will-proceed-city-says.html, 2016-11-10).
+
+> The data collected in `2014`, prior to the proposal being published in the article, shows that a majority of the parents disagreed when it comes to the question about `whether or not they felt like their children was safe in school`. Zone 191, which had the most answers collected among the 3 schools (possibly reflecting greater parent turn-out rate or higher student population), shows the almost 280 parents answered Disagree to the question and almost 100 answered Strongly Disagree. As a result, a total of almost 400 out of less than 450 parents answered Disagree/Strongly Disagree to the question. This thus reflects how greatly unsafe they felt about the school zone. In Comparison to Zone 191, the majority of parents for Zone 199 also answered Disagree/Strongly Disagree to the question. However, only about 100 answered Disagree, and almost 200 parents answered Strongly Disagree. As a result, almost the entire parent population (325) believes that their children are not safe in school. Compared to the previous two schools, although parents in Zone 452 mostly disagreed with the question as well, the parent population is much smaller in comparison. about 100 answered Strongly Disagree and about 25 answered Disagree.
+Overall, we can see that generally, the parents of all three schools were greatly unhappy about the safety situation at their children's schools. Even though the article mentioned that Zones 199 and 452 serve students that are mostly white and well off, we can see that the parents still felt very unsafe.
+
+> In comparison to the data collected in 2014, the data collected in `2019`, after the article was published, shows the `opposite trend`. Whereas the parent turn-out rate between similar school zones in the two years are similar, we can see that there is a significant decrease in the number of parents that answered Disagree/Strongly Disagree to the question in 2019 as compared to 2014 in all 3 schools. Zone 191 had only about 25 parents who answered Disagree/Strongly Disagree out of about 400 parents, while the rest mostly answered Agree/ Strongly Agree and only about 10 answered I Don't Know. Whereas only about 10 parents answered Disagree/Strongly Disagree in Zone 199, out of about 300 parents. And most parents answered Strongly Agree followed by Agree. And less than 5 answered I Don't Know. Similarly, only about 10 parents answered Disagree/Strongly Disagree out of about 200 parents in Zone 452. Most parents answered Strongly Agree, followed by Agree. And less than 5 answered I don't know.
+By `comparing the data from the 2 years`, given that the proposal was implemented, we can see that there is a `significant increase` in `parent satisfaction` with how safe their child was in school. Whereas I expected there to be improvement, I am surprised by the `significant improvement` with regards to parent satisfation between the two years.
+
+
